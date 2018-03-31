@@ -1,3 +1,9 @@
+# Excimontec Coupled with Poisson Solver
+This fork of Excimontec allows to take into account effects of charge accumulation at the interfaces of a bilayer device which make the internal potential in a device non-uniform. It does so by periodically recalculating the internal potential by solving the Poisson equation.
+
+=============================================================================================================================
+Below is the README from the Original Excimontec:
+
 # Excimontec
 The goal of this project is to develop an open-source KMC simulation software package for modeling organic semiconductor materials and devices, such as OPVs, OLEDs, and more. 
 The software is being developed in modern C++ and is optimized for efficient execution on high performance computing clusters using MPI. 

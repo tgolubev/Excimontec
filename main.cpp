@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
 	vector<string> error_messages;
 	char error_found = (char)0;
 	// Start timer
-	time_start = time(NULL);
+        time_start = time(NULL);
+
 	// Import parameters and options from parameter file and command line arguments
 	cout << "Loading input parameters from file... " << endl;
 	parameterfilename = argv[1];
@@ -71,16 +72,20 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 	cout << "Parameter loading complete!" << endl;
+
 	// Initialize mpi options
 	cout << "Initializing MPI options... ";
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 	MPI_Comm_rank(MPI_COMM_WORLD, &procid);
 	cout << procid << ": MPI initialization complete!" << endl;
+
 	// Initialize error monitoring vectors
 	proc_finished.assign(nproc, false);
 	error_status_vec.assign(nproc, false);
 	error_messages.assign(nproc, "");
+
+        //=====================================================================================
 	// Morphology set import handling
 	if (params_main.Enable_import_morphology_set && params_main.N_test_morphologies > nproc) {
 		cout << "Error! The number of requested processors cannot be less than the number of morphologies tested." << endl;
@@ -140,6 +145,7 @@ int main(int argc, char *argv[]) {
 	else {
 		params_opv.Enable_import_morphology = false;
 	}
+        //=========================================================================================================================
 	// Setup file output
 	cout << procid << ": Creating output files..." << endl;
 	if (params_opv.Enable_logging) {
@@ -149,10 +155,11 @@ int main(int argc, char *argv[]) {
 		ss.str("");
 	}
 	params_opv.Logfile = &logfile;
+
 	// Initialize Simulation
 	cout << procid << ": Initializing simulation " << procid << "..." << endl;
 	OSC_Sim sim;
-	success = sim.init(params_opv, procid);
+        success = sim.init(params_opv, procid); //initialization fnc (init) is in OSC_Sim.cpp, returns bool
 	if (!success) {
 		cout << procid << ": Initialization failed, simulation will now terminate." << endl;
 		return 0;
@@ -170,6 +177,8 @@ int main(int argc, char *argv[]) {
 	else if (params_opv.Enable_IQE_test) {
 		cout << procid << ": Starting internal quantum efficiency test..." << endl;
 	}
+
+        //========================================================================================================
 	// Begin Simulation loop
 	// Simulation ends for all procs with procid >0 when End_sim is true
 	// Proc 0 only ends when End_sim is true and all_finished is true
@@ -248,9 +257,12 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			}
-			// Output status
+                        // Output status
 			if (sim.getN_events_executed() % 1000000 == 0) {
-				sim.outputStatus();
+                                sim.outputStatus();  //this also updates # of charges collected at bilayer interface (if not bilayer, it will just find 0 charge there..)
+                                //if(Enable_Poisson_coupled){
+                                    sim.Poisson_couple();  //this will do the coupling
+                                //}
 			}
 			// Reset logfile
 			if (params_opv.Enable_logging) {
@@ -267,6 +279,7 @@ int main(int argc, char *argv[]) {
 	cout << procid << ": Simulation finished." << endl;
 	time_end = time(NULL);
 	elapsedtime = (int)difftime(time_end, time_start);
+
 	// Output result summary for each processor
 	ss << "results" << procid << ".txt";
 	resultsfile.open(ss.str().c_str());

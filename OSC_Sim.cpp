@@ -4,6 +4,7 @@
 // The Excimontec project can be found on Github at https://github.com/MikeHeiber/Excimontec
 
 #include "OSC_Sim.h"
+#include "KMC_Lattice/Poisson/Setup_Poisson_bilayer.h"  //allows coupling to Poisson
 
 using namespace std;
 using namespace Utils;
@@ -25,7 +26,9 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
 		return false;
 	}
 	bool success;
-    // Set parameters of Simulation base class
+
+    //==========================================================================================================
+    // Set parameters of Simulation base class, this is just to not have to keep using params.
     Simulation::init(params,id);
     // Set Additional General Parameters
     Internal_potential = params.Internal_potential;
@@ -133,6 +136,7 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
     Coulomb_cutoff = params.Coulomb_cutoff;
     // Output files
 
+    //=======================================================================================================
     // Initialize Sites
     Site_OSC site;
     sites.assign(lattice.getNumSites(),site);
@@ -146,7 +150,8 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
 	}
 	// Assign energies to each site in the sites vector
 	reassignSiteEnergies();
-    // Initialize Coulomb interactions lookup table
+
+    // Initialize Coulomb interactions lookup table  NEED TO FIGURE OUT HOW THIS WORKS
     double avgDielectric = (Dielectric_donor+Dielectric_acceptor)/2;
 	double Unit_size = lattice.getUnitSize();
     int range = (int)ceil(intpow(Coulomb_cutoff/lattice.getUnitSize(),2));
@@ -157,11 +162,14 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
             Coulomb_table[i] *= erf((Unit_size*sqrt((double)i))/(Polaron_delocalization_length*sqrt(2)));
         }
     }
+
     // Initialize electrical potential vector
     E_potential.assign(lattice.getHeight(),0);
     for(int i=0;i<lattice.getHeight();i++){
         E_potential[i] = (Internal_potential*lattice.getHeight()/(lattice.getHeight()+1))-(Internal_potential/(lattice.getHeight()+1))*i;
     }
+
+    //===========================================================================================================
     // Initialize exciton creation event
     R_exciton_generation_donor = ((Exciton_generation_rate_donor*N_donor_sites*1e-7*lattice.getUnitSize())*1e-7*lattice.getUnitSize())*1e-7*lattice.getUnitSize();
     R_exciton_generation_acceptor = ((Exciton_generation_rate_acceptor*N_acceptor_sites*1e-7*lattice.getUnitSize())*1e-7*lattice.getUnitSize())*1e-7*lattice.getUnitSize();
@@ -218,6 +226,8 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
         // Create initial test polarons
         generateToFPolarons();
     }
+    //=====================================================================================
+
 	if (Enable_IQE_test) {
 		electron_extraction_data.assign(lattice.getLength()*lattice.getWidth(), 0);
 		hole_extraction_data.assign(lattice.getLength()*lattice.getWidth(), 0);
@@ -230,6 +240,10 @@ bool OSC_Sim::init(const Parameters_OPV& params,const int id){
 	}
 }
 
+//this version where pass lists of Polaron objects is used for polaron hopping events calculations
+//it makes use of a Coulomb_table: which precalculates all of the Coulomb interactions for ALL possible distances within the cubic lattice --> since
+//all particles are on a lattice CAN PRECALCULATE ALL POSSIBLE Coulomb interactions and then just add the correct interactions when those sites are occupied!
+
 double OSC_Sim::calculateCoulomb(const list<Polaron>::const_iterator polaron_it, const Coords& coords) const {
 	static const double avgDielectric = (Dielectric_donor + Dielectric_acceptor) / 2;
 	static const double image_interactions = (Elementary_charge / (16 * Pi*avgDielectric*Vacuum_permittivity))*1e9;
@@ -237,7 +251,7 @@ double OSC_Sim::calculateCoulomb(const list<Polaron>::const_iterator polaron_it,
 	double distance;
 	int distance_sq_lat;
 	bool charge = polaron_it->getCharge();
-	static const int range = (int)ceil((Coulomb_cutoff / lattice.getUnitSize())*(Coulomb_cutoff / lattice.getUnitSize()));
+        static const int range = (int)ceil((Coulomb_cutoff / lattice.getUnitSize())*(Coulomb_cutoff / lattice.getUnitSize())); //range defines integer value of sites in all directions for which will consider Coloumb interactions.
 	// Loop through electrons
 	for (auto const &item : electrons) {
 		if (!charge && item.getTag() == polaron_it->getTag()) {
@@ -282,6 +296,9 @@ double OSC_Sim::calculateCoulomb(const list<Polaron>::const_iterator polaron_it,
 	return Energy;
 }
 
+//this version where pass it a const bool charge, is used in exciton dissociation events calculations
+//NOTE: this is done efficiently--> it adds up pre-calculated Coulomb interactions, since all particles are at lattice sites,
+//just need to determine which neighboring sites within the Coulomb cutoff are occupied and add their contributions
 double OSC_Sim::calculateCoulomb(const bool charge, const Coords& coords) const {
 	static const double avgDielectric = (Dielectric_donor + Dielectric_acceptor) / 2;
 	static const double image_interactions = (Elementary_charge / (16 * Pi*avgDielectric*Vacuum_permittivity))*1e9;
@@ -443,6 +460,9 @@ Coords OSC_Sim::calculateExcitonCreationCoords(){
     Error_found = true;
     return dest_coords;
 }
+
+//=======================EXCITON EVENTS =============================================================================================
+//there's a Coloumb calculation used inside here
 
 void OSC_Sim::calculateExcitonEvents(Exciton* exciton_ptr){
     const auto exciton_it = getExcitonIt(exciton_ptr);
@@ -791,6 +811,11 @@ void OSC_Sim::calculateExcitonEvents(Exciton* exciton_ptr){
 	// Set the finally chosen event
 	setObjectEvent(exciton_ptr,event_ptr_target);
 }
+//end of Exciton events
+
+//==========================================================================================================
+//IMPORTANT FUNCTION: calculates the events list for the Object (i.e. exciton or polaron) that's passed to it
+//HERE he is using "polaron" as = "charge carrier" --> either electron or hole
 
 void OSC_Sim::calculateObjectListEvents(const vector<Object*>& object_ptr_vec){
     if(isLoggingEnabled()){
@@ -808,18 +833,24 @@ void OSC_Sim::calculateObjectListEvents(const vector<Object*>& object_ptr_vec){
     }
 }
 
+//============================POLARON EVENTS (electrons and holes)==========================================================
+//calculates events list for a polaron (charge carrier) which is passed to fnc via a pointer
+//there's coulomb interaction calculation used inside here
+
 void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
     const auto polaron_it = getPolaronIt(polaron_ptr);
     const Coords object_coords = polaron_it->getCoords();
     if(isLoggingEnabled()){
-        if(!polaron_it->getCharge()){
+        if(!polaron_it->getCharge()){  //determine if the polaron (charge carrier) is an electron or hole
             *Logfile << "Calculating events for electron " << polaron_it->getTag() << " at site " << object_coords.x << "," << object_coords.y << "," << object_coords.z << "." << endl;
         }
         else{
             *Logfile << "Calculating events for hole " << polaron_it->getTag() << " at site " << object_coords.x << "," << object_coords.y << "," << object_coords.z << "." << endl;
         }
     }
-	if (Enable_phase_restriction && !polaron_it->getCharge() && getSiteType(object_coords)==(short)1) {
+
+       //makes sure no electrons in donor side or holes in acceptor side--> BUT SHOULDN'T THIS BE OPPOSITE???!--> electrons should be on donor side...
+        if (Enable_phase_restriction && !polaron_it->getCharge() && getSiteType(object_coords)==(short)1) { //site type specifies donor  or acceptor
 		cout << "Error! Electron is on a donor site and should not be with phase restriction enabled." << endl;
 		setErrorMessage("Electron is on a donor site and should not be with phase restriction enabled.");
 		Error_found = true;
@@ -835,24 +866,32 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
     //double E_delta;
     int index;
 	double E_site_i = getSiteEnergy(object_coords);
+
+    //IMPORTANT: calculate Coulomb interactions felt by parrticular polaron (in the present site)--> this is used later to calculate site energy difference for hopping
     double Coulomb_i = calculateCoulomb(polaron_it,object_coords);
-	vector<Event*> possible_events;
+
+        vector<Event*> possible_events; //stores possible events for this polaron
+
 	// Static obejcts
-    static const int range = (int)ceil(Polaron_hopping_cutoff/ lattice.getUnitSize());
-    static const int dim = (2*range+1);
+    static const int range = (int)ceil(Polaron_hopping_cutoff/ lattice.getUnitSize()); //# of neighboring lattice sites which to include
+    static const int dim = (2*range+1); //i.e. like getting a diameter from radius
 	static Polaron_Hop hop_event(this);
     static vector<Polaron_Hop> hops_temp(dim*dim*dim,hop_event);
 	static Polaron_Recombination rec_event(this);
 	static vector<Polaron_Recombination> recombinations_temp(dim*dim*dim,rec_event);
     static vector<bool> hops_valid(dim*dim*dim,false);
     static vector<bool> recombinations_valid(dim*dim*dim,false);
-	// pre-calculate a distances vector that contains the distances to nearby sites used for event execution time calculations
-	// pre-calculate a isInRange vector that contains booleans to indicate if the nearby sites are within range for polaron events to be possible.
-	static vector<double> distances(dim*dim*dim, 0.0);
+
+        //allocate a distances vector that contains the distances to nearby sites used for event execution time calculations
+        // allocate a isInRange vector that contains booleans to indicate if the nearby sites are within range for polaron events to be possible.
+        static vector<double> distances(dim*dim*dim, 0.0); //dim*dim*dim specifies # of elements in the vector --> b/c need dim # of sites in 3D, sets all values to 0
 	static vector<double> E_deltas(dim*dim*dim, 0.0);
 	static vector<bool> isInRange(dim*dim*dim, false);
 	static bool isInitialized = false;
-	// Intialize static distances and isInRange vectors
+
+        // Fill in static distances and isInRange vectors, NOTE: is bit tricky b/c 1D vector contains indices corresponding to sites in 3D lattice
+        //the vector stores all distances that are within this cube of side length dim of the polaron of interest, but our Polaron_hopping_cutoff cutoff is spherical-->
+        //need the isInRange bool vector to specify whether each site is within range of Polaron_hopping_cutoff
 	if (!isInitialized) {
 		for (int i = -range; i <= range; i++) {
 			for (int j = -range; j <= range; j++) {
@@ -867,39 +906,56 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 		}
 		isInitialized = true;
 	}
+
 	// Calculate Polaron hopping and recombination events
+
+        //first make all hops and recombinations invalid, then find the ones which are valid events
 	hops_valid.assign(dim*dim*dim, false);
 	recombinations_valid.assign(dim*dim*dim, false);
+
     for(int i=-range;i<=range;i++){
         for(int j=-range;j<=range;j++){
             for(int k=-range;k<=range;k++){
-				index = (i + range)*dim*dim + (j + range)*dim + (k + range);
-				if (!isInRange[index]) {
-					continue;
-				}
-				if (!lattice.checkMoveValidity(object_coords, i, j, k)) {
-					continue;
-				}
+                index = (i + range)*dim*dim + (j + range)*dim + (k + range);
+                //if not within Polaron_hopping_cutoff, we skip it
+                if (!isInRange[index]) {
+                    continue;
+                }
+                //check if the hop is valid, just makes sure not trying to hop to 0,0,0 (which  is the locaction of the site where hopping from!)
+                //and if have no PBCs enabled, makes sure can't hop outside of system boundary
+                if (!lattice.checkMoveValidity(object_coords, i, j, k)) {
+                    continue;
+                }
+
+                //remap the indeces of sites to  which hopping is  allowed to destination coordinates (dest_coords is Coords object and is given a value by this fnc.)
+                //This also applies PBCs
                 lattice.calculateDestinationCoords(object_coords,i,j,k,dest_coords);
+
+                //=====================================================================
                 // Recombination events
-                // If destination site is occupied by a hole Polaron and the main Polaron is an electron, check for a possible recombination event
+                // If destination site is occupied by a hole Polaron and the main Polaron is an electron (getCharge() is false if is electron), check for a possible recombination event
+                //NOTE: recombo events are allowed to be initiated ONLY by an electron's movement--> might be to prevent double counting of possible recombinations?
                 if(lattice.isOccupied(dest_coords) && !polaron_it->getCharge() && siteContainsHole(dest_coords)){
+
+                    //the  2 if's allow to have different rates for recombination depending on whether recombo event is occuring in donor or acceptor layer, due to different polaron degrees of localization
                     if(getSiteType(object_coords)==(short)1){
                         recombinations_temp[index].calculateExecutionTime(R_polaron_recombination,Polaron_localization_donor,distances[index],0);
                     }
                     else if(getSiteType(object_coords)==(short)2){
                         recombinations_temp[index].calculateExecutionTime(R_polaron_recombination,Polaron_localization_acceptor,distances[index],0);
                     }
-					recombinations_temp[index].setObjectPtr(polaron_ptr);
+                    recombinations_temp[index].setObjectPtr(polaron_ptr);
                     recombinations_temp[index].setDestCoords(dest_coords);
                     recombinations_temp[index].setObjectTargetPtr((*lattice.getSiteIt(dest_coords))->getObjectPtr());
                     recombinations_valid[index] = true;
                 }
+
                 // Hop events
                 // If destination site is unoccupied and either phase restriction is disabled or the starting site and destination sites have the same type, check for a possible hop event
+                //NOTE: hop events are only allowed for within same type material --> otherwise i.e. if electron jumps from donor to acceptor to an occupied hole site, that's considered a recombo. event NOT a hop event.
                 if(!lattice.isOccupied(dest_coords) && (!Enable_phase_restriction || getSiteType(object_coords)==getSiteType(dest_coords))){
 					E_deltas[index] = (getSiteEnergy(dest_coords) - E_site_i);
-					E_deltas[index] += (calculateCoulomb(polaron_it,dest_coords)-Coulomb_i);
+                                        E_deltas[index] += (calculateCoulomb(polaron_it,dest_coords)-Coulomb_i);  //difference in site energies includes the DIFFERENCE btw. Coulomb interactions felt in the new site and felt in the present site
                     if(!polaron_it->getCharge()){
                         E_deltas[index] += (E_potential[dest_coords.z]-E_potential[object_coords.z]);
                     }
@@ -946,6 +1002,7 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
             }
         }
     }
+
     // Calculate possible extraction event
     // Electrons are extracted at the bottom of the lattice (z=-1)
     // Holes are extracted at the top of the lattice (z=Height)
@@ -953,6 +1010,7 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 		bool Extraction_valid = false;
 		list<Polaron_Extraction>::iterator extraction_event_it;
 		double distance;
+
         // If electron, charge is false
         if(!polaron_it->getCharge()){
             distance = lattice.getUnitSize()*((double)(object_coords.z+1)-0.5);
@@ -962,6 +1020,7 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
                 Extraction_valid = true;
             }
         }
+
         // If hole, charge is true
         else{
             distance = lattice.getUnitSize()*((double)(lattice.getHeight()-object_coords.z)-0.5);
@@ -981,6 +1040,7 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 			possible_events.push_back(&(*extraction_event_it));
         }
     }
+
     // Add the valid hop events to possible events vector
 	index = 0;
     for (auto &item : hops_temp){
@@ -1002,7 +1062,8 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 		setObjectEvent(polaron_ptr,nullptr);
         return;
     }
-    // Determine the fastest possible event
+
+    // Determine the fastest possible event (FRM)
 	double best_time = possible_events[0]->getExecutionTime();
 	Event* event_ptr_target = possible_events[0];
 	for (auto const &event_ptr : possible_events) {
@@ -1012,6 +1073,8 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 		}
 	}
 	// Copy the chosen temp event to the appropriate main event list and set the target event pointer to the corresponding event from the main list
+        //NOTE: for EACH polaron, only ONE of the possible events which the polaron can do will be chosen (based on the one with lowest execution/wait time) and will be added
+        //along with its corresponding executiontime to the main events list--> selection from main list, selects WHICH polaron or exciton will have their (ALREADY CHOSEN) event executed
 	string event_type = event_ptr_target->getEventType();
 	if (event_type.compare(Polaron_Hop::event_type)==0) {
 		list<Polaron_Hop>::iterator hop_list_it;
@@ -1038,7 +1101,7 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 		// If hole, charge is true
 		else {
 			setObjectEvent(polaron_ptr, nullptr);
-			cout << getId() << ": Error! Only electrons can initiate polaron recombination." << endl;
+                        cout << getId() << ": Error! Only electrons can initiate polaron recombination." << endl;  //NOTE: using this condition perhaps TO AVOID DOUBLE COUNTING of possible polaron pair recombinations?
 			setErrorMessage("Error calcualting polaron events. Only electrons can initiate polaron recombination.");
 			Error_found = true;
 			return;
@@ -1049,6 +1112,8 @@ void OSC_Sim::calculatePolaronEvents(Polaron* polaron_ptr){
 	// Set the finlly chosen event
 	setObjectEvent(polaron_ptr, event_ptr_target);
 }
+//end of Polaron events
+//=================================================================================================================
 
 bool OSC_Sim::checkFinished() const{
     if(Error_found){
@@ -1077,6 +1142,7 @@ bool OSC_Sim::checkFinished() const{
     return true;
 }
 
+//===================PARAMETERS CHECKING=======================================================================================================
 bool OSC_Sim::checkParameters(const Parameters_OPV& params) const {
 	// Check lattice parameters and other general parameters
 	if (!(params.Length > 0) || !(params.Width > 0) || !(params.Height > 0)) {
@@ -1372,6 +1438,8 @@ bool OSC_Sim::checkParameters(const Parameters_OPV& params) const {
 	return true;
 }
 
+//======END OF PARAMETERS CHECKING==================================================================================================
+
 void OSC_Sim::createCorrelatedDOS(const double correlation_length) {
 	int range;
 	double stdev, percent_diff;
@@ -1661,12 +1729,15 @@ void OSC_Sim::deleteObject(Object* object_ptr){
     }
 }
 
+//IMPORTANT FUNCTION--> a little misnamed--> not only does this create an exciton, it also UPDATES THE EVENTS LIST
 bool OSC_Sim::executeExcitonCreation(){
     // Create new exciton and determine its coordinates
 	Coords coords_new = generateExciton();
-	// Update event list
+
+        // UPDATES THE EVENTS LIST
 	auto recalc_objects = findRecalcObjects(coords_new, coords_new);
 	calculateObjectListEvents(recalc_objects);
+
     // Calculate next exciton creation event
     exciton_creation_events.front().calculateExecutionTime(R_exciton_generation_donor+R_exciton_generation_acceptor);
     return true;
@@ -1859,13 +1930,14 @@ bool OSC_Sim::executeExcitonRecombination(const list<Event*>::const_iterator eve
 	return true;
 }
 
+//IMPORTANT execution of next event function =====================================================================
 bool OSC_Sim::executeNextEvent() {
 	if (Enable_IQE_test) {
 		if (isLightOn && N_excitons_created == N_tests) {
 			removeEvent(&exciton_creation_events.front());
 			isLightOn = false;
 		}
-	}
+        }
 	// Perform Transients test analysis
 	if (Enable_dynamics_test || Enable_ToF_test) {
 		updateTransientData();
@@ -1904,7 +1976,8 @@ bool OSC_Sim::executeNextEvent() {
 			return true;
 		}
 	}
-    auto event_it = chooseNextEvent();
+
+    auto event_it = chooseNextEvent();  //this fnc. is in simulation.cpp, returns a pointer to next event
     if(*event_it==nullptr){
         cout << getId() << ": Error! The simulation has no events to execute." << endl;
 		setErrorMessage("The simulation has no events to execute.");
@@ -1915,11 +1988,13 @@ bool OSC_Sim::executeNextEvent() {
     if(isLoggingEnabled()){
         *Logfile << "Executing " << event_type << " event" << endl;
     }
+
     // Update simulation time
     setTime((*event_it)->getExecutionTime());
+
     // Execute the chosen event
     if(event_type.compare(Exciton_Creation::event_type)==0){
-        return executeExcitonCreation();
+        return executeExcitonCreation(); //NOTE: this return value calls a function--> calls the redupdating of event list!
     }
     else if(event_type.compare(Exciton_Hop::event_type)==0){
         return executeExcitonHop(event_it);
@@ -1956,6 +2031,8 @@ bool OSC_Sim::executeNextEvent() {
         return false;
     }
 }
+
+//=============================================================================================================
 
 bool OSC_Sim::executeObjectHop(const list<Event*>::const_iterator event_it) {
 	// Get event info
@@ -2009,7 +2086,7 @@ bool OSC_Sim::executePolaronExtraction(const list<Event*>::const_iterator event_
         }
     }
 	auto recalc_objects = findRecalcObjects(coords_initial, coords_initial);
-	calculateObjectListEvents(recalc_objects);
+        calculateObjectListEvents(recalc_objects);  //update the events list
     return true;
 }
 
@@ -2329,6 +2406,7 @@ list<Exciton>::iterator OSC_Sim::getExcitonIt(const Object* object_ptr){
 	return excitons.end();
 }
 
+//NOTE: THIS IS TREATEMENT OF FIELD
 double OSC_Sim::getInternalField() const {
 	return Internal_potential / (1e-7*lattice.getHeight()*lattice.getUnitSize());
 }
@@ -2580,6 +2658,8 @@ bool OSC_Sim::initializeArchitecture() {
 	return true;
 }
 
+//============OUTPUT TO TERMINAL====================================================================================================
+//this fnc is only called from main.cpp
 void OSC_Sim::outputStatus(){
     cout << getId() << ": Time = " << getTime() << " seconds.\n";
     if(Enable_ToF_test){
@@ -2619,9 +2699,59 @@ void OSC_Sim::outputStatus(){
         for (auto const &item : holes){
             cout << getId() << ": Hole " << item.getTag() << " is at " << item.getCoords().x << "," << item.getCoords().y << "," << item.getCoords().z << ".\n";
         }
+        //I want to cout (for testing) the # of charges at the interface + calculate charge density at interface...
+        if(Enable_bilayer){
+            //note:these are already defined in the OSC_Sim.h as member variables of this class
+            N_left_int_holes=0;
+            N_right_int_holes=0;
+            N_left_int_electrons=0;
+            N_right_int_electrons=0;
+            for (auto const &item : electrons){
+                if(item.getCoords().z == Thickness_acceptor-1) N_left_int_electrons++; //the way the grids are working, the electrons gather at -1 of the right bndry of acceptor...
+                if(item.getCoords().z == Thickness_acceptor) N_right_int_electrons++;
+            }
+            for (auto const &item : holes){
+                if(item.getCoords().z == Thickness_acceptor-1) N_left_int_holes++;
+                if(item.getCoords().z == Thickness_acceptor) N_right_int_holes++;
+            }
+            cout << "Number of holes at right interface bndry " << N_right_int_holes++ << ".\n";
+            cout << "Number of electrons at left interface bndry " << N_left_int_electrons++ << ".\n";
+
+            //these 2 should be zero b/c are minority carriers..
+            cout << "Number of holes at left interface bndry " << N_left_int_holes++ << ".\n";
+            cout << "Number of electrons at right interface bndry " << N_right_int_electrons++ << ".\n";
+        }
+
     }
     cout.flush();
 }
+//================================================================================================================================================================
+void OSC_Sim::Poisson_couple(){
+    //calculate left and right int charges in Coloumbs: want these to be local variables, just temporary calculations
+    //for now use a constant epsilon
+    double e = 1.6e-19; //elementary charge
+    double *epsilon = new double[lattice.getHeight()+1]; // height gives # of nodes in z-direction. new returns the pointer to the newly allocated space.
+    for(int i=0;i<=lattice.getHeight();i++){
+        epsilon[i] = 3.8;  //note: although epsilon is a pointer--> when use i.e. epsilon[i]--> this will fill the array that epsilon points to
+    }
+    //new_potential will store potential INSIDE the device...
+    double *new_potential = new double[lattice.getHeight()-1]; //-1: b/c i.e. a height of 75, has grid 0 --> 75 which is 76 pts, and we want inside pts = 74 of them
+
+    double left_int_charge =  (N_left_int_holes - N_left_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
+    double right_int_charge =  (N_right_int_holes - N_right_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
+    new_potential = potential(lattice.getHeight()-1, epsilon, E_potential[0], E_potential[lattice.getHeight()], left_int_charge, right_int_charge, Thickness_acceptor); //note: BCs on V, get form the E_potential...
+    //note: *epsilon is the array corresponding to the pointer: epsilon--> so send the pointer itself by "epsilon"
+    //another way to get location of 1st element of epsilon: &epsilon[0]
+
+    //reset E_potential, note: BCs are kept the same
+    for (int i = 1;i<= lattice.getHeight()-1;i++){
+        E_potential[i] = new_potential[i];
+    }
+
+    cout << "E_potential has been recalculated " << ".\n";
+}
+
+
 
 void OSC_Sim::reassignSiteEnergies() {
 	if (Enable_gaussian_dos) {

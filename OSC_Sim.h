@@ -8,6 +8,7 @@
 
 #include "KMC_Lattice/Simulation.h"
 #include "KMC_Lattice/Site.h"
+
 #include "Exciton.h"
 #include "Polaron.h"
 #include <algorithm>
@@ -181,6 +182,7 @@ class OSC_Sim : public Simulation{
         int getN_bimolecular_recombinations() const;
 		int getN_transient_cycles() const;
         void outputStatus();
+        void Poisson_couple();
 		void reassignSiteEnergies();
     protected:
 
@@ -412,6 +414,12 @@ class OSC_Sim : public Simulation{
         bool initializeArchitecture();
         bool siteContainsHole(const Coords& coords);
         void updateTransientData();
+
+       //Bilayer parameters
+        int N_left_int_holes=0;
+        int N_right_int_holes=0;
+        int N_left_int_electrons=0;
+        int N_right_int_electrons=0;
 };
 
 #endif //OSC_SIM_H

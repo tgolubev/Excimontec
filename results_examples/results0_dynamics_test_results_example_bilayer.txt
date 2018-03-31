@@ -1,0 +1,20 @@
+Excimontec v1.0-beta.3 Results:
+Calculation time elapsed is 1.58333 minutes.
+5.39014e-05 seconds have been simulated.
+2172884 events have been executed.
+Dynamics test results:
+10000 initial excitons were created.
+5001 excitons were created on donor sites.
+4999 excitons were created on acceptor sites.
+29.99% of excitons have dissociated.
+69.67% of excitons relaxed to the ground state as singlets.
+0.17% of excitons relaxed to the ground state as triplets.
+0.16% of excitons were lost to singlet-singlet annihilation.
+0% of excitons were lost to singlet-triplet annihilation.
+0% of excitons were lost to triplet-triplet annihilation.
+0.01% of excitons were lost to singlet-polaron annihilation.
+0% of excitons were lost to triplet-polaron annihilation.
+76.7256% of photogenerated charges were lost to geminate recombination.
+0.0333444% of photogenerated charges were lost to bimolecular recombination.
+23.2411% of photogenerated charges were extracted.
+
