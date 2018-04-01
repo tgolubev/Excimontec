@@ -2748,6 +2748,9 @@ void OSC_Sim::Poisson_couple(){
         E_potential[i] = new_potential[i];
     }
 
+    //delete[] new_potential;
+    //delete[] epsilon;
+
     cout << "E_potential has been recalculated " << ".\n";
 }
 

@@ -91,6 +91,12 @@ double* TriCRSSolver(double *a, double *b, double *c, double *rhs, int num_eleme
     }
 
     //%test[i] = A_inverse*rhs
+
+    //clean up
+    //delete[] zeta;
+    //delete[] phi;
+    //delete[] A_inverse;
+
 return x;
 }
 

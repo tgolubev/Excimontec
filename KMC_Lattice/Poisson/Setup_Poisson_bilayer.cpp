@@ -59,6 +59,12 @@ double * potential(int num_elements, double* epsilon, double V_leftBC, double V_
 
     potential = TriCRSSolver(a, b, c, rhs,  num_elements);
 
+    //delete[] a;
+    //delete[] b;
+    //delete[] c;
+    //delete[] rhs;
+
+
     /*
     //output the result to terminal
     for(int i = 1;i<= num_elements; i++){
