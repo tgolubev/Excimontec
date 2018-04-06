@@ -1,8 +1,14 @@
 # Excimontec Coupled with Poisson Solver
-This fork of Excimontec allows to take into account effects of charge accumulation at the interfaces of a bilayer device which make the internal potential in a device non-uniform. It does so by periodically recalculating the internal potential by solving the Poisson equation.
+This goal of this fork is to: 
+1. Allow to take into account effects of charge accumulation at the interfaces of a bilayer device which make the internal potential in a device non-uniform. 
+   Do so by periodically recalculating the internal potential by solving the Poisson equation.
+2. Allow for automatic JV curve generating by repeating the dynamics test with gradually increased internal potential. Again take into account charge
+   accumulation by solving the Poisson equation.
 
-=============================================================================================================================
-Below is the README from the Original Excimontec:
+**Currently experimental and under development
+
+==============================================================================================
+Below is the README from the original Excimontec by Mike Heiber:
 
 # Excimontec
 The goal of this project is to develop an open-source KMC simulation software package for modeling organic semiconductor materials and devices, such as OPVs, OLEDs, and more. 

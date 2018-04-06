@@ -5,6 +5,7 @@
 
 #include "OSC_Sim.h"
 #include "KMC_Lattice/Poisson/Setup_Poisson_bilayer.h"  //allows coupling to Poisson
+#include <vector>
 
 using namespace std;
 using namespace Utils;
@@ -2730,13 +2731,14 @@ void OSC_Sim::Poisson_couple(){
     //calculate left and right int charges in Coloumbs: want these to be local variables, just temporary calculations
     //for now use a constant epsilon
     double e = 1.6e-19; //elementary charge
-    double *epsilon = new double[lattice.getHeight()+1]; // height gives # of nodes in z-direction. new returns the pointer to the newly allocated space.
-    for(int i=0;i<=lattice.getHeight();i++){
-        epsilon[i] = 3.8;  //note: although epsilon is a pointer--> when use i.e. epsilon[i]--> this will fill the array that epsilon points to
+    std::vector<double> epsilon(lattice.getHeight()+1);
+    //double *epsilon = new double[lattice.getHeight()+1]; // height gives # of nodes in z-direction. new returns the pointer to the newly allocated space.
+    for(int i=0;i<=epsilon.size();i++){
+        epsilon[i] = 3.8;
     }
     //new_potential will store potential INSIDE the device...
-    double *new_potential = new double[lattice.getHeight()-1]; //-1: b/c i.e. a height of 75, has grid 0 --> 75 which is 76 pts, and we want inside pts = 74 of them
-
+    //double *new_potential = new double[lattice.getHeight()-1]; //-1: b/c i.e. a height of 75, has grid 0 --> 75 which is 76 pts, and we want inside pts = 74 of them
+    std::vector<double> new_potential(lattice.getHeight()); //this is +1 b/c I fill from index of 1
     double left_int_charge =  (N_left_int_holes - N_left_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
     double right_int_charge =  (N_right_int_holes - N_right_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
     new_potential = potential(lattice.getHeight()-1, epsilon, E_potential[0], E_potential[lattice.getHeight()], left_int_charge, right_int_charge, Thickness_acceptor); //note: BCs on V, get form the E_potential...

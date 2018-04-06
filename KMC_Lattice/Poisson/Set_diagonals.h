@@ -1,9 +1,11 @@
-#ifndef SET_DIAGS_H
-#define SET_DIAGS_H
+#ifndef SET_AV_DIAGS_H
+#define SET_AV_DIAGS_H
+
+#include<vector>
 
 
-double* set_main_diag(double *epsilon, double *a, int num_elements);
-double* set_upper_diag(double *epsilon, double *b, int num_elements);
-double* set_lower_diag(double *epsilon, double *c, int num_elements);
+std::vector<double> set_main_diag(std::vector<double> &epsilon, std::vector<double> &a);
+std::vector<double> set_upper_diag(std::vector<double> &epsilon, std::vector<double> &b);
+std::vector<double> set_lower_diag(std::vector<double> &epsilon, std::vector<double> &c);
 
-#endif // SET_DIAGS_H
+#endif // SET_AV_DIAGS_H
