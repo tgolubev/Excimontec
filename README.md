@@ -1,13 +1,12 @@
 # Excimontec Coupled with Poisson Solver
 This goal of this fork is to: 
-1. Allow to take into account effects of charge accumulation at the interfaces of a bilayer device which make the internal potential in a device non-uniform. 
+1. Allow to take into account effects of charge accumulation at the interfaces of a bilayer device which could make the internal potential in a device non-uniform. 
    Do so by periodically recalculating the internal potential by solving the Poisson equation.
-2. Allow for automatic JV curve generating by repeating the dynamics test with gradually increased internal potential. Again take into account charge
-   accumulation by solving the Poisson equation.
+2. Allow for automatic JV curve generating by repeating the IQE calculation with gradually increased internal potential. Equations to allow for charge injection will need to be added. Again take into account charge accumulation by solving the Poisson equation.
 
 **Currently experimental and under development
 
-==============================================================================================
+=============================================================
 Below is the README from the original Excimontec by Mike Heiber:
 
 # Excimontec

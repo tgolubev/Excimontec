@@ -2661,6 +2661,7 @@ bool OSC_Sim::initializeArchitecture() {
 
 //============OUTPUT TO TERMINAL====================================================================================================
 //this fnc is only called from main.cpp
+//USE THESE AS EXAMPLE for getting output to file of the positions..
 void OSC_Sim::outputStatus(){
     cout << getId() << ": Time = " << getTime() << " seconds.\n";
     if(Enable_ToF_test){
@@ -2726,7 +2727,47 @@ void OSC_Sim::outputStatus(){
     }
     cout.flush();
 }
-//================================================================================================================================================================
+//===================OUTPUT TO XYZ FILE============================================================================================================
+/*
+void OSC_Sim::openXYZ(){
+    xyzfile.open("movie.xyz");
+}
+
+void OSC_SIM::closeXYZ(){
+    xyzfile.close();
+}
+*/
+
+
+void OSC_Sim::writeXYZ(){
+    if(Enable_IQE_test){
+        xyzfile << N_excitons + N_electrons + N_holes << endl;  //total # of particles in the lattice
+        xyzfile << "The is an optional comment line that can be empty. " << endl;
+        for (auto const &item : excitons){
+            xyzfile << "Ar " <<    //excitons will be Ar for Ovito
+                    item.getCoords().x << " " <<
+                    item.getCoords().y << " " <<
+                    item.getCoords().z << " " <<
+                    item.getTag() << "\n";  // exciton #
+        }
+        for (auto const &item : electrons){
+            xyzfile << "H " <<    //electrons will be H for Ovito
+                    item.getCoords().x << " " <<
+                    item.getCoords().y << " " <<
+                    item.getCoords().z << " " <<
+                    item.getTag() << "\n";  //output proc and electron #
+        }
+        for (auto const &item : holes){
+            xyzfile << "He " <<    //electrons will be He for Ovito
+                    item.getCoords().x << " " <<
+                    item.getCoords().y << " " <<
+                    item.getCoords().z << " " <<
+                    item.getTag() << "\n";  //output proc and hole #
+        }
+     }
+}
+
+
 void OSC_Sim::Poisson_couple(){
     //calculate left and right int charges in Coloumbs: want these to be local variables, just temporary calculations
     //for now use a constant epsilon

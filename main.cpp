@@ -179,10 +179,29 @@ int main(int argc, char *argv[]) {
 	}
 
         //========================================================================================================
+        //Setup XYZ file
+        bool write_xyz = true; //LATER MAKE THIS A PARAMETER set through parameter file
+        if(write_xyz){   
+            sim.xyzfile.open("movie.xyz"); //NOTE: the xyzfile is an ofstream which is member of sim (object of OSC_Sim class)
+            //sim.openXYZ();
+        }
+        //specify events when start and stop writing xyz--> also later make this set through input parameters
+        int start_write = 1;
+        int stop_write = 100;
+
+
 	// Begin Simulation loop
 	// Simulation ends for all procs with procid >0 when End_sim is true
 	// Proc 0 only ends when End_sim is true and all_finished is true
 	while (!End_sim || (procid == 0 && !all_finished)) {
+              if(sim.getN_events_executed() >= start_write && sim.getN_events_executed() <= stop_write){
+                  sim.writeXYZ();
+              }
+              if(sim.getN_events_executed() > stop_write){
+                  sim.xyzfile.close();
+                  //sim.closeXYZ();
+              }
+
 		if (!End_sim) {
 			success = sim.executeNextEvent();
 			if (!success) {

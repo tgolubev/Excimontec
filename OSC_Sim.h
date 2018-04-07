@@ -13,6 +13,10 @@
 #include "Polaron.h"
 #include <algorithm>
 #include <numeric>
+#include <fstream>
+
+//std::ofstream xyzfile;
+
 
 struct Parameters_OPV : Parameters_Simulation{
     // Additional General Parameters
@@ -182,6 +186,8 @@ class OSC_Sim : public Simulation{
         int getN_bimolecular_recombinations() const;
 		int getN_transient_cycles() const;
         void outputStatus();
+        void writeXYZ();
+        std::ofstream xyzfile;
         void Poisson_couple();
 		void reassignSiteEnergies();
     protected:
