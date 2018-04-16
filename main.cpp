@@ -148,6 +148,7 @@ int main(int argc, char *argv[]) {
         //=========================================================================================================================
 	// Setup file output
 	cout << procid << ": Creating output files..." << endl;
+
 	if (params_opv.Enable_logging) {
 		ss << "log" << procid << ".txt";
 		logfilename = ss.str();
@@ -180,27 +181,36 @@ int main(int argc, char *argv[]) {
 
         //========================================================================================================
         //Setup XYZ file
-        bool write_xyz = true; //LATER MAKE THIS A PARAMETER set through parameter file
+        bool write_xyz = false; //LATER MAKE THIS A PARAMETER set through parameter file
         if(write_xyz){   
             sim.xyzfile.open("movie.xyz"); //NOTE: the xyzfile is an ofstream which is member of sim (object of OSC_Sim class)
             //sim.openXYZ();
         }
         //specify events when start and stop writing xyz--> also later make this set through input parameters
         int start_write = 1;
-        int stop_write = 100;
+        int stop_write = 1010000;
 
 
 	// Begin Simulation loop
 	// Simulation ends for all procs with procid >0 when End_sim is true
 	// Proc 0 only ends when End_sim is true and all_finished is true
 	while (!End_sim || (procid == 0 && !all_finished)) {
+
+            if(write_xyz){
+              /*
               if(sim.getN_events_executed() >= start_write && sim.getN_events_executed() <= stop_write){
+                  sim.writeXYZ();
+              }
+              */
+
+              if(sim.getN_events_executed() >= start_write && sim.getN_events_executed() % 1000== 0 && sim.getN_events_executed() <= stop_write){
                   sim.writeXYZ();
               }
               if(sim.getN_events_executed() > stop_write){
                   sim.xyzfile.close();
                   //sim.closeXYZ();
               }
+            }
 
 		if (!End_sim) {
 			success = sim.executeNextEvent();
@@ -283,7 +293,7 @@ int main(int argc, char *argv[]) {
                                     sim.Poisson_couple();  //this will do the coupling
                                 //}
 			}
-			// Reset logfile
+                        // Reset logfile--> makes new log...
 			if (params_opv.Enable_logging) {
 				if (sim.getN_events_executed() % 1000 == 0) {
 					logfile.close();
@@ -627,7 +637,7 @@ bool importParameters(ifstream& inputfile,Parameters_main& params_main,Parameter
     }
     int i = 0;
     // Simulation Parameters
-	params.Enable_logging = false;
+        params.Enable_logging = false;                //LOGGING CONTROLLED HERE ========================================================================
 	// KMC Algorithm Parameters
 	params.Enable_FRM = importBooleanParam(stringvars[i], error_status);
 	if (error_status) {

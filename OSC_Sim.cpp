@@ -2122,8 +2122,8 @@ bool OSC_Sim::executePolaronRecombination(const list<Event*>::const_iterator eve
     Coords coords_initial = object_ptr->getCoords();
     Coords coords_dest = (*event_it)->getDestCoords();
     // Delete polarons and their events
-    deleteObject((*event_it)->getObjectTargetPtr());
-    deleteObject(object_ptr);
+    deleteObject((*event_it)->getObjectTargetPtr());   //deletes 1 of the polarons and its events
+    deleteObject(object_ptr);                          //deletes 2nd polaron and its events
     // Update polaron counters
     N_electrons_recombined++;
     N_holes_recombined++;
@@ -2743,28 +2743,29 @@ void OSC_Sim::writeXYZ(){
     if(Enable_IQE_test){
         xyzfile << N_excitons + N_electrons + N_holes << endl;  //total # of particles in the lattice
         xyzfile << "The is an optional comment line that can be empty. " << endl;
-        for (auto const &item : excitons){
-            xyzfile << "Ar " <<    //excitons will be Ar for Ovito
+        for (auto const &item : holes){
+            xyzfile << "1 " <<
                     item.getCoords().x << " " <<
                     item.getCoords().y << " " <<
                     item.getCoords().z << " " <<
-                    item.getTag() << "\n";  // exciton #
+                    item.getTag() << "\n";
+        }
+        for (auto const &item : excitons){
+            xyzfile << "2 " <<            //making excitons = 2, makes them green in Ovito
+                    item.getCoords().x << " " <<
+                    item.getCoords().y << " " <<
+                    item.getCoords().z << " " <<
+                    item.getTag() << "\n";
         }
         for (auto const &item : electrons){
-            xyzfile << "H " <<    //electrons will be H for Ovito
+            xyzfile << "3 " <<    //particle identifier for Ovito
                     item.getCoords().x << " " <<
                     item.getCoords().y << " " <<
                     item.getCoords().z << " " <<
-                    item.getTag() << "\n";  //output proc and electron #
+                    item.getTag() << "\n";  //output electron label, which site it's at
         }
-        for (auto const &item : holes){
-            xyzfile << "He " <<    //electrons will be He for Ovito
-                    item.getCoords().x << " " <<
-                    item.getCoords().y << " " <<
-                    item.getCoords().z << " " <<
-                    item.getTag() << "\n";  //output proc and hole #
-        }
-     }
+    }
+
 }
 
 
@@ -2773,28 +2774,29 @@ void OSC_Sim::Poisson_couple(){
     //for now use a constant epsilon
     double e = 1.6e-19; //elementary charge
     std::vector<double> epsilon(lattice.getHeight()+1);
-    //double *epsilon = new double[lattice.getHeight()+1]; // height gives # of nodes in z-direction. new returns the pointer to the newly allocated space.
+
     for(int i=0;i<=epsilon.size();i++){
         epsilon[i] = 3.8;
     }
     //new_potential will store potential INSIDE the device...
-    //double *new_potential = new double[lattice.getHeight()-1]; //-1: b/c i.e. a height of 75, has grid 0 --> 75 which is 76 pts, and we want inside pts = 74 of them
     std::vector<double> new_potential(lattice.getHeight()); //this is +1 b/c I fill from index of 1
-    double left_int_charge =  (N_left_int_holes - N_left_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
-    double right_int_charge =  (N_right_int_holes - N_right_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize());
+
+    cout << "get unit size" << lattice.getUnitSize() <<endl;
+
+    double left_int_charge =  (N_left_int_holes - N_left_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize()*lattice.getUnitSize()*(1e-9*1e-9*1e-9)); //note: the last lattice.getUnitSize() takes care of the divide by z-direction
+    double right_int_charge =  (N_right_int_holes - N_right_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize()*lattice.getUnitSize()*(1e-9*1e-9*1e-9));  //NOTE: MUST CONVERT the nm to meters!
     new_potential = potential(lattice.getHeight()-1, epsilon, E_potential[0], E_potential[lattice.getHeight()], left_int_charge, right_int_charge, Thickness_acceptor); //note: BCs on V, get form the E_potential...
-    //note: *epsilon is the array corresponding to the pointer: epsilon--> so send the pointer itself by "epsilon"
-    //another way to get location of 1st element of epsilon: &epsilon[0]
 
     //reset E_potential, note: BCs are kept the same
     for (int i = 1;i<= lattice.getHeight()-1;i++){
         E_potential[i] = new_potential[i];
+        cout << E_potential[i] <<  "\n";
     }
 
-    //delete[] new_potential;
-    //delete[] epsilon;
-
     cout << "E_potential has been recalculated " << ".\n";
+
+    auto object_its = getAllObjectPtrs();
+    calculateObjectListEvents(object_its); //will recalculate full events list
 }
 
 

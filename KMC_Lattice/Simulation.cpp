@@ -20,6 +20,8 @@ void Simulation::init(const Parameters_Simulation& params, const int id) {
 	Id = id;
 	// General Parameters
 	Enable_logging = params.Enable_logging;
+//FOR NOW MANUALLY ENABLE LOGGING, until figure out how to use the params
+//Enable_logging = true;
 	// Event recalculation method parameters
 	Enable_FRM = params.Enable_FRM;
 	Enable_selective_recalc = params.Enable_selective_recalc;

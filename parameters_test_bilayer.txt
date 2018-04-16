@@ -33,7 +33,7 @@ morphology_#_compressed.txt //Morphology_set_format
 1 //N_morphology_set_size NOTE: I think these are only relevant to the "import morphology set enabled case"
 --------------------------------------------------------------
 ## Test Parameters
-50000 //N_tests
+10000 //N_tests
 false //Enable_exciton_diffusion_test
 false //Enable_ToF_test
 hole //ToF_polaron_type (electron or hole)
