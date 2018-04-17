@@ -13,7 +13,7 @@ true //Enable_periodic_y
 false //Enable_periodic_z
 250 //Length
 250 //Width
-75 //Height (note: for bilayer, sum of donor plus acceptor layer mmust equal the lattice height)
+75 //Height (note: for bilayer, sum of donor plus acceptor layer must equal the lattice height)
 1.0 //Unit_size (nm)
 300 //Temperature (K)
 -0.1 //Internal_potential (V)
@@ -21,7 +21,7 @@ false //Enable_periodic_z
 ## Device Architecture Parameters
 false //Enable_neat (uses donor properties)
 true //Enable_bilayer
-50 //Thickness_donor  These are modeling my P3HT:PCBM bilayer
+50 //Thickness_donor  
 25 //Thickness_acceptor
 false //Enable_random_blend
 0.5 //Acceptor_conc
@@ -33,7 +33,7 @@ morphology_#_compressed.txt //Morphology_set_format
 1 //N_morphology_set_size NOTE: I think these are only relevant to the "import morphology set enabled case"
 --------------------------------------------------------------
 ## Test Parameters
-50000 //N_tests
+10000 //N_tests
 false //Enable_exciton_diffusion_test
 false //Enable_ToF_test
 hole //ToF_polaron_type (electron or hole)
@@ -52,7 +52,7 @@ true //Enable_dynamics_extraction
 10 //Dynamics_pnts_per_decade Only applicable if dynamics_test is enabled
 --------------------------------------------------------------
 ## Exciton Parameters
-1e22 //Exciton_generation_rate_donor (cm^-3 s^-1) This is 1e28/m^3 s which is consistent with what I used for perovskites etc..
+1e22 //Exciton_generation_rate_donor (cm^-3 s^-1) 
 1e22 //Exciton_generation_rate_acceptor (cm^-3 s^-1)
 500e-12 //Singlet_lifetime_donor (s)     
 500e-12 //Singlet_lifetime_acceptor (s)
@@ -86,7 +86,7 @@ false //Enable_FRET_triplet_annihilation
 --------------------------------------------------------------
 ## Polaron Parameters
 true //Enable_phase_restriction
-1e12 //R_polaron_hopping_donor (s^-1)  I BELIVE THIS CONTROLS THE MOBILITY! (changed from 1e12)
+1e12 //R_polaron_hopping_donor (s^-1)  Controls mobility
 1e12 //R_polaron_hopping_acceptor (s^-1) (changed from 1e12)
 2.0 //Polaron_localization_donor (nm^-1)
 2.0 //Polaron_localization_acceptor (nm^-1)

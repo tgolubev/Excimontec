@@ -21,6 +21,11 @@
 
 std::vector<double> potential(int num_elements, std::vector<double> &epsilon, double V_leftBC, double V_rightBC, double left_int_charge, double right_int_charge, int z_int)
 {
+    double epsilon_0 = 8.854e-12; //SI units
+    double dx = 1e-9;   //for now, will always be using a 1nm grid spacing
+
+    double CV = -dx*dx/epsilon_0;
+
     std::vector<double> a (num_elements+1);//main diag
     std::vector<double> b(num_elements); //upper diag, size can be = num_elements b/c off-diags are 1 element less than  main diag
     std::vector<double> c(num_elements);//lower diag
@@ -35,8 +40,10 @@ std::vector<double> potential(int num_elements, std::vector<double> &epsilon, do
     for (int i = 1;i<= num_elements;i++){
          rhs[i] = 0;  //set all charge densities to 0, then add the interface_charge
     }
-    rhs[z_int-1] = left_int_charge;
-    rhs[z_int] = right_int_charge;
+    rhs[z_int-1] = CV*left_int_charge;
+    rhs[z_int] = CV*right_int_charge;
+
+    std::cout  << "left int charge density" << left_int_charge <<std::endl;
 
     //test i.e. having a dipole at accross 24-25
     //rhs[24] = 0.681; //corresponds to having 5 holes/(75nm)^2 plane at the interface, with z-mesh size of 1nm
