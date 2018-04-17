@@ -2768,11 +2768,7 @@ void OSC_Sim::Poisson_couple(){
     //new_potential will store potential INSIDE the device...
     std::vector<double> new_potential(lattice.getHeight());
 
-    //calculate left and right int charge densities in unites: C/m^3
-    std::vector<double> new_potential(lattice.getHeight()); //this is +1 b/c I fill from index of 1
-
-    cout << "get unit size" << lattice.getUnitSize() <<endl;
-
+    //calculate left and right int charge densities in units: C/m^3
     double left_int_charge =  (N_left_int_holes - N_left_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize()*lattice.getUnitSize()*(1e-9*1e-9*1e-9)); //note: the last lattice.getUnitSize() takes care of the divide by z-direction
     double right_int_charge =  (N_right_int_holes - N_right_int_electrons)*e/(lattice.getLength()*lattice.getUnitSize()*lattice.getWidth()*lattice.getUnitSize()*lattice.getUnitSize()*(1e-9*1e-9*1e-9));  //NOTE: MUST CONVERT the nm to meters!
     new_potential = potential(lattice.getHeight()-1, epsilon, E_potential[0], E_potential[lattice.getHeight()], left_int_charge, right_int_charge, Thickness_acceptor); //note: BCs on V, get form the E_potential...
@@ -2787,11 +2783,6 @@ void OSC_Sim::Poisson_couple(){
     //Recalculate full events list (since many event rates depend on E_potential)
     auto object_its = getAllObjectPtrs();
     calculateObjectListEvents(object_its);
-
-    cout << "E_potential has been recalculated " << ".\n";
-
-    auto object_its = getAllObjectPtrs();
-    calculateObjectListEvents(object_its); //will recalculate full events list
 }
 
 
